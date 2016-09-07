@@ -1,34 +1,255 @@
 <link rel="import" href="../polymer/polymer.html">
-
+<link rel="import" href="../iron-pages/iron-pages.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-tabs/paper-tabs.html">
+<link rel="import" href="../paper-spinner/paper-spinner.html">
+<script>
+	var CKEDITOR_BASEPATH = "../bower_components/ckeditor/";
+</script>
+<script src="../ckeditor/ckeditor.js"></script>
 <!--
-`puredat-rich-text-i18n`
-
-
-@demo demo/index.html 
+	`puredat-rich-text-i18n` "RICH_TEXT" type, "ONE" cardinality, and "I18N" widget.
+	
+	@demo demo/index.html 
 -->
-
 <dom-module id="puredat-rich-text-i18n">
-  <template>
-    <style>
-      :host {
-        display: block;
-      }
-    </style>
-    <h2>TO-DO [[prop1]]</h2>
-  </template>
+	<template>
+		<style>
+			paper-spinner {
+				position: absolute;
+				margin-top: -45px;
+				margin-left: 10px;
+			}
+			
+			paper-tabs {
+				--paper-tabs-selection-bar-color: var(--accent-color);
+				padding-right: 10px;
+				font-size: 12px;
+				height: 35px;
+				
+				--paper-tabs-selection-bar: {
+					bottom: 6px;
+				}				
+			}
+			
+			paper-input {
+				--paper-input-container: {
+					padding-right: 10px;
+				}
+			}
+			
+			paper-icon-button {
+				position: absolute;
+				right: 0;
+				bottom: 0;
+			}
+			
+			paper-tabs {
+				--paper-tabs-selection-bar-color: var(--default-primary-color);
+			}
+		</style>
+		
+		<iron-ajax id="ajax"
+				on-response="responseHandler"
+				url="https://api.mymemory.translated.net/get"
+				method="GET"
+				verbose="false">
+		</iron-ajax>
 
-  <script>
-    Polymer({
+		<div style="display: flex">
+			<span style="height: 10px; font-size: 12px; color: #757575; padding-top: 10px; flex: 1">[[label]]</span>
 
-      is: 'puredat-rich-text-i18n',
+			<paper-tabs 
+					id="languageTabs"
+					noink 
+					selected="{{selected}}">
 
-      properties: {
-        prop1: {
-          type: String,
-          value: 'puredat-rich-text-i18n',
-        },
-      },
-
-    });
-  </script>
+				<template is="dom-repeat" items="{{values}}">
+					<paper-tab active$="[[isSelected(index)]]">[[item.languageLiteral]]</paper-tab>
+				</template>
+			</paper-tabs>
+		</div>
+		
+		<iron-pages selected="{{selected}}">
+			<template is="dom-repeat" items="{{values}}">
+				<paper-input
+						no-label-float
+						type="text" 
+						maxlength="[[maxLength]]" 
+						allowed-pattern="[[pattern]]"
+						value="{{item.value}}" 
+						error-message="[[errorMessage]]"
+						invalid="[[_isInvalid(errorMessage)]]"
+						readonly$="[[readOnly]]">
+					<paper-icon-button 
+							suffix 
+							title="Traducir" 
+							icon="translate"
+							disabled$="[[readOnly]]" 
+							on-click="translateHandler">
+					</paper-icon-button>
+				</paper-input>
+			</template>
+		</iron-pages>
+		<paper-spinner active$="[[isSpinnerActive(_pendingCount)]]"></paper-spinner>
+	</template>
+	
+	<script>
+		Polymer({
+			is: 'puredat-rich-text-i18n',
+			
+			properties: {
+				
+				_pendingCount: {
+					type: Number,
+					value: 0
+				},
+				
+				selected: {
+					type: Number,
+					value: 0
+				},
+				
+				/** Values. Sub-properties are languageName, languageLiteral, and value. */
+				values: {
+					type: Array,
+					value: function() {
+						return [
+							{
+								languageName: "es_ES",
+								languageLiteral: "Español"
+							},
+							{
+								languageName: "de",
+								languageLiteral: "Alemán"
+							},
+							{
+								languageName: "zh_HK",
+								languageLiteral: "Chino"
+							},
+							{
+								languageName: "en_US",
+								languageLiteral: "Inglés"
+							},
+							{
+								languageName: "fr_FR",
+								languageLiteral: "Francés"
+							}
+						];
+					}
+				},
+				
+				/** Name */
+				name: {
+					type: String
+				},
+				
+				/** Maximum length. */
+				maxLength: {
+					type: Number,
+					value: 100
+				},
+				
+				/** Allowed pattern. For example: [a-zA-Z]. */
+				pattern: {
+					type: String
+				},
+				
+				/** Descriptive label. */
+				label: {
+					type: String
+				},
+				
+				/** Error message. */
+				errorMessage: {
+					type: String
+				},
+				
+				/** Number of columns in a row of 10 columns. */
+				cols: {
+					type: Number,
+					value: 5,
+					observer: '_colsChanged'
+				},
+				
+				/** Read only. */
+				readOnly: {
+					type: Boolean,
+					value: false
+				}
+			},
+			
+			isSpinnerActive: function(pendingCount) {
+				return (pendingCount > 0);
+			},
+			
+			translateHandler: function(event) {
+				var baseLanguage;
+				var baseValue;
+				
+				if (this.values != null
+						&& this.values.length > 0) {
+					for (var i = 0; i < this.values.length; i++) {
+						var languageName = this.values[i].languageName;
+						if (languageName != null && languageName != "") {
+							if (this.values[i].value != null
+									&& this.values[i].value != "") {
+								baseLanguage = languageName;
+								baseValue = this.values[i].value;
+								break;
+							}
+						}						
+					}
+					
+					for (var i = 0; i < this.values.length; i++) {
+						var languageName = this.values[i].languageName;
+						if (languageName != baseLanguage) {
+							this.$.ajax.params["q"] = baseValue;
+							this.$.ajax.params["langpair"] = baseLanguage.split("_")[0] + "|" + languageName.replace("_", "-");
+							this.$.ajax.generateRequest();
+							this._pendingCount++;
+						}
+					}
+				}
+			},
+			
+			responseHandler: function(event, request) {
+				this._pendingCount--;
+				if (event.detail.succeeded) {
+					if (event.detail.response != null
+							&& event.detail.response.matches != null
+							&& event.detail.response.matches.length > 0) {
+						var values = JSON.parse(JSON.stringify(this.values));
+						var searchParams = new URLSearchParams(request.url);
+						for (var i = 0; i < values.length; i++) {
+							if (values[i].languageName == searchParams.get("langpair").split("|")[1].replace("-", "_")) {
+								values[i].value = event.detail.response.responseData.translatedText;
+							}
+						}
+						this.set("values", values);
+					}
+				}
+			},
+			
+			isSelected: function(number) {
+				return number == 0;
+			},
+			
+			_colsChanged: function(newValue, oldValue) {
+				this.style.minWidth = (50 * newValue) + "px";
+				this.style.flex = (10 * newValue) + "%";
+			},
+			
+			/**
+			 * Returns if the field is valid.
+			 * @param {String} errorMessage The error message.
+			 * @return {Boolean} If the input field is valid.
+			 */
+			_isInvalid: function(errorMessage) {
+				return errorMessage != null
+						&& errorMessage != "";
+			}
+		});
+	</script>
 </dom-module>
