@@ -71,8 +71,13 @@
 			</paper-tabs>
 		</div>
 		
-		<iron-pages selected="{{selected}}">
+		<iron-pages id="pages" selected="{{selected}}">
 			<template is="dom-repeat" items="{{values}}">
+				<div id="[[getRichTextContainerName(item)]]">
+					<div class="container">
+					</div>
+				</div>
+				<!-- 
 				<paper-input
 						no-label-float
 						type="text" 
@@ -90,6 +95,7 @@
 							on-click="translateHandler">
 					</paper-icon-button>
 				</paper-input>
+				-->
 			</template>
 		</iron-pages>
 		<paper-spinner active$="[[isSpinnerActive(_pendingCount)]]"></paper-spinner>
@@ -180,6 +186,25 @@
 				}
 			},
 			
+			observers: ['valuesChangedHandler(values)'],
+			
+			valuesChangedHandler: function(values) {
+			},
+			
+			attached: function(event) {
+				this.async(function() {
+					CKEDITOR.config.removePlugins = "about,maximize,sourcearea";
+					
+					for (var i = 0; i < this.values.length; i++) {
+						var editor = CKEDITOR.replace(this.$$("#" + this.values[i].languageName + "Container .container"), {
+							language: "es"
+						});
+						//editor.config.readOnly = this.readOnly;
+						//editor.setData(this.value);
+					}
+				});
+			},
+			
 			isSpinnerActive: function(pendingCount) {
 				return (pendingCount > 0);
 			},
@@ -249,6 +274,10 @@
 			_isInvalid: function(errorMessage) {
 				return errorMessage != null
 						&& errorMessage != "";
+			},
+			
+			getRichTextContainerName: function(item) {
+				return item.languageName + "Container";
 			}
 		});
 	</script>
