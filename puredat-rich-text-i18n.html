@@ -5,7 +5,10 @@
 <link rel="import" href="../paper-tabs/paper-tabs.html">
 <link rel="import" href="../paper-spinner/paper-spinner.html">
 <script>
-	var CKEDITOR_BASEPATH = "../bower_components/ckeditor/";
+	var CKEDITOR_BASEPATH = "/admin/bower_components/ckeditor/";
+	//var CKEDITOR_BASEPATH = "bower_components/ckeditor/"; This does not work in edit when editing an existing record. !!!
+	// Component development 
+	// var CKEDITOR_BASEPATH = "../bower_components/ckeditor/";
 </script>
 <script src="../ckeditor/ckeditor.js"></script>
 <!--
@@ -48,14 +51,7 @@
 			paper-tabs {
 				--paper-tabs-selection-bar-color: var(--default-primary-color);
 			}
-		</style>
-		
-		<iron-ajax id="ajax"
-				on-response="responseHandler"
-				url="https://api.mymemory.translated.net/get"
-				method="GET"
-				verbose="false">
-		</iron-ajax>
+		</style>s
 
 		<div style="display: flex">
 			<span style="height: 10px; font-size: 12px; color: #757575; padding-top: 10px; flex: 1">[[label]]</span>
@@ -65,39 +61,21 @@
 					noink 
 					selected="{{selected}}">
 
-				<template is="dom-repeat" items="{{values}}">
-					<paper-tab active$="[[isSelected(index)]]">[[item.languageLiteral]]</paper-tab>
+				<template is="dom-repeat" items="[[supportedLanguages]]">
+					<paper-tab active$="[[isSelected(index)]]">{{_getLangName(item)}}</paper-tab>
 				</template>
 			</paper-tabs>
 		</div>
-		
+
 		<iron-pages id="pages" selected="{{selected}}">
-			<template is="dom-repeat" items="{{values}}">
+			<template is="dom-repeat" items="[[supportedLanguages]]">
 				<div id="[[getRichTextContainerName(item)]]" style="padding-right: 10px">
-					<div class="container">
+					<div class="container" data-lng$="{{item}}">
 					</div>
 				</div>
-				<!-- 
-				<paper-input
-						no-label-float
-						type="text" 
-						maxlength="[[maxLength]]" 
-						allowed-pattern="[[pattern]]"
-						value="{{item.value}}" 
-						error-message="[[errorMessage]]"
-						invalid="[[_isInvalid(errorMessage)]]"
-						readonly$="[[readOnly]]">
-					<paper-icon-button 
-							suffix 
-							title="Traducir" 
-							icon="translate"
-							disabled$="[[readOnly]]" 
-							on-click="translateHandler">
-					</paper-icon-button>
-				</paper-input>
-				-->
 			</template>
 		</iron-pages>
+
 		<paper-spinner active$="[[isSpinnerActive(_pendingCount)]]"></paper-spinner>
 	</template>
 	
@@ -116,34 +94,14 @@
 					type: Number,
 					value: 0
 				},
+
+				supportedLanguages: {
+					type: Array
+				},
 				
-				/** Values. Sub-properties are languageName, languageLiteral, and value. */
-				values: {
-					type: Array,
-					value: function() {
-						return [
-							{
-								languageName: "es_ES",
-								languageLiteral: "Español"
-							},
-							{
-								languageName: "de",
-								languageLiteral: "Alemán"
-							},
-							{
-								languageName: "zh_HK",
-								languageLiteral: "Chino"
-							},
-							{
-								languageName: "en_US",
-								languageLiteral: "Inglés"
-							},
-							{
-								languageName: "fr_FR",
-								languageLiteral: "Francés"
-							}
-						];
-					}
+				value: {
+					type: Object,
+					observer: "_valueChanged"
 				},
 				
 				/** Name */
@@ -183,78 +141,67 @@
 				readOnly: {
 					type: Boolean,
 					value: false
+				},
+
+				_ckInstances: {
+					type: Object,
+					value: function(){ return {}; }
+				},
+
+				_locales:{
+					type: Object,
+					value: function(){ return {"AF": "Afganistán","AL": "Albania","DZ": "Argelia","AS": "Samoa Americana","AD": "Andorra","AO": "Angola","AI": "Anguila","AQ": "Antártida","AG": "Antigua y Barbuda","AR": "Argentina","AM": "Armenia","AW": "Aruba",    "AU": "Australia",    "AT": "Austria",    "AZ": "Azerbaiyán",    "BS": "Bahamas",    "BH": "Bahrein",    "BD": "Bangladesh",    "BB": "Barbados",    "BY": "Belarús",    "BE": "Bélgica",    "BZ": "Belice",    "BJ": "Benin",    "BM": "Bermudas",    "BT": "Bhután",    "BO": "Bolivia",    "BA": "Bosnia y Herzegovina",    "BW": "Botswana",    "BV": "Isla Bouvet",    "BR": "Brasil",    "IO": "Territorio Británico del Océano Índico",    "BN": "Brunei Darussalam",    "BG": "Bulgaria",    "BF": "Burkina Faso",    "BI": "Burundi",    "KH": "Camboya",    "CM": "Camerún",    "CA": "Canadá",    "CV": "Cabo Verde",    "KY": "Islas Caimán",    "CF": "República Centroafricana",    "TD": "Chad",    "CL": "Chile",    "CN": "China",    "CX": "Isla de Navidad",    "CC": "Islas Cocos (Keeling)",    "CO": "Colombia",    "KM": "Comoras",    "CG": "Congo",    "CD": "Congo (República Democrática del)",    "CK": "Islas Cook",    "CR": "Costa Rica",    "CI": "Costa de Marfil",    "HR": "Croacia",    "CU": "Cuba",    "CY": "Chipre",    "CZ": "República Checa",    "DK": "Dinamarca",    "DJ": "Djibouti",    "DM": "Dominica",    "DO": "República Dominicana",    "EC": "Ecuador",    "EG": "Egipto",    "SV": "El Salvador",    "GQ": "Guinea Ecuatorial",    "ER": "Eritrea",    "EE": "Estonia",    "ET": "Etiopía",    "FK": "Islas Malvinas",    "FO": "Islas Feroe",    "FJ": "Fiji",    "FI": "Finlandia",    "FR": "Francia",    "GF": "Guayana Francesa",    "PF": "Polinesia Francesa",    "TF": "Tierras Australes Francesas",    "GA": "Gabón",    "GM": "Gambia",    "GE": "Georgia",    "DE": "Alemania",    "GH": "Ghana",    "GI": "Gibraltar",    "GR": "Grecia",    "GL": "Groenlandia",    "GD": "Granada",    "GP": "Guadeloupe",    "GU": "Guam",    "GT": "Guatemala",    "GN": "Guinea",    "GW": "Guinea Bissau",    "GY": "Guyana",    "HT": "Haití",    "HM": "Heard e Islas McDonald",    "VA": "Santa Sede",    "HN": "Honduras",    "HK": "Hong Kong",    "HU": "Hungría",    "IS": "Islandia",    "IN": "India",    "ID": "Indonesia",    "IR": "Irán (República Islámica de)",    "IQ": "Iraq",    "IE": "Irlanda",    "IL": "Israel",    "IT": "Italia",    "JM": "Jamaica",    "JP": "Japón",    "JO": "Jordania",    "KZ": "Kazajstán",    "KE": "Kenya",    "KI": "Kiribati",    "KP": "República Popular Democrática de Corea",    "KR": "República de Corea",    "KW": "Kuwait",    "KG": "Kirguistán",    "LA": "República Democrática Popular de Lao",    "LV": "Letonia",    "LB": "Líbano",    "LS": "Lesotho",    "LR": "Liberia",    "LY": "Libia",    "LI": "Liechtenstein",    "LT": "Lituania",    "LU": "Luxemburgo",    "MO": "Macao",    "MK": "Macedonia",    "MG": "Madagascar",    "MW": "Malawi",    "MY": "Malasia",    "MV": "Maldivas",    "ML": "Malí",    "MT": "Malta",    "MH": "Islas Marshall",    "MQ": "Martinique",    "MR": "Mauritania",    "MU": "Mauricio",    "YT": "Mayotte",    "MX": "México",    "FM": "Micronesia",    "MD": "Moldavia",    "MC": "Mónaco",    "MN": "Mongolia",    "MS": "Montserrat",    "MA": "Marruecos",    "MZ": "Mozambique",    "MM": "Myanmar",    "NA": "Namibia",    "NR": "Nauru",    "NP": "Nepal",    "NL": "Países Bajos",    "NC": "Nueva Caledonia",    "NZ": "Nueva Zelanda",    "NI": "Nicaragua",    "NE": "Níger",    "NG": "Nigeria",    "NU": "Niue",    "NF": "Isla Norfolk",    "MP": "Isla Marianas del Norte",    "NO": "Noruega",    "OM": "Omán",    "PK": "Pakistán",    "PW": "Palau",    "PS": "Palestina",    "PA": "Panamá",    "PG": "Papua Nueva Guinea",    "PY": "Paraguay",    "PE": "Perú",    "PH": "Filipinas",    "PN": "Pitcairn",    "PL": "Polonia",    "PT": "Portugal",    "PR": "Puerto Rico",    "QA": "Qatar",    "RE": "Reunión",    "RO": "Rumania",    "RU": "Rusia",    "RW": "Rwanda",    "SH": "Santa Helena, Ascensión y Tristán de Acuña",    "KN": "Saint Kitts y Nevis",    "LC": "Santa Lucía",    "PM": "San Pedro y Miquelón",    "VC": "San Vicente y las Granadinas",    "WS": "Samoa",    "SM": "San Marino",    "ST": "Santo Tomé y Príncipe",    "SA": "Arabia Saudita",    "SN": "Senegal",    "SC": "Seychelles",    "SL": "Sierra Leona",    "SG": "Singapur",    "SK": "Eslovaquia",    "SI": "Eslovenia",    "SB": "Islas Salomón",    "SO": "Somalia",    "ZA": "Sudáfrica",    "GS": "Georgia del Sur y las Islas Sandwich del Sur",    "ES": "España",    "LK": "Sri Lanka",    "SD": "Sudan",    "SR": "Suriname",    "SJ": "Svalbard y Jan Mayen",    "SZ": "Swazilandia",    "SE": "Suecia",    "CH": "Suiza",    "SY": "República Árabe Siria",    "TW": "Taiwán",    "TJ": "Tayikistán",    "TZ": "Tanzania",    "TH": "Tailandia",    "TL": "Timor-Leste",    "TG": "Togo",    "TK": "Tokelau",    "TO": "Tonga",    "TT": "Trinidad y Tobago",    "TN": "Túnez",    "TR": "Turquía",    "TM": "Turkmenistán",    "TC": "Islas Turcas y Caicos",    "TV": "Tuvalu",    "UG": "Uganda",    "UA": "Ucrania",    "AE": "Emiratos Árabes Unidos",    "GB": "Reino Unido",    "US": "Estados Unidos",    "UM": "Islas Ultramarinas Menores de los Estados Unidos",    "UY": "Uruguay",    "UZ": "Uzbekistán",    "VU": "Vanuatu",    "VE": "Venezuela",    "VN": "Vietnam",    "VG": "Islas Vírgenes británicas",    "VI": "Islas Vírgenes de los Estados Unidos",    "WF": "Wallis y Futuna",    "EH": "Sahara Occidental",    "YE": "Yemen",    "ZM": "Zambia",    "ZW": "Zimbabwe",    "AX": "Islas Åland",    "BQ": "Bonaire, San Eustaquio y Saba",    "CW": "Curaçao",    "GG": "Guernsey",    "IM": "Isla de Man",    "JE": "Jersey",    "ME": "Montenegro",    "BL": "Saint Barthélemy",    "MF": "Saint Martin (francesa)",    "RS": "Serbia",    "SX": "Sint Maarten (neerlandesa)",    "SS": "Sudán del Sur",    "XK": "Kosovo"  }; }
 				}
 			},
-			
-			observers: ['valuesChangedHandler(values)'],
-			
-			valuesChangedHandler: function(values) {
+
+			_getLangName: function(value){
+				return this._locales[value.split("_")[0].toUpperCase()];
+			},
+
+			setValue: function(value){
+				this.value = value;
+				for (var i = 0; i < this.supportedLanguages.length; i++) {
+					if(this._ckInstances[this.supportedLanguages[i]]){
+						this._ckInstances[this.supportedLanguages[i]].setData(this.value[this.supportedLanguages[i]] ? decodeURIComponent(this.value[this.supportedLanguages[i]]) : null);
+					}
+				}
+			},
+
+			getValue: function(){
+				return this.value;
+			},
+
+			_valueChanged: function(value){
+				console.log(value);
 			},
 			
+			_newValue: function(event){
+				if(event.editor && event.editor.element){
+					var src = event.editor.element;
+					if(src.getAttribute("data-lng")){
+						this.value[src.getAttribute("data-lng")] = event.editor.getData() ? encodeURIComponent(event.editor.getData()) : null;
+					}
+				}
+			},
+
 			attached: function(event) {
 				this.async(function() {
 					CKEDITOR.config.removePlugins = "about,maximize,sourcearea";
 					
-					for (var i = 0; i < this.values.length; i++) {
-						var editor = CKEDITOR.replace(this.$$("#" + this.values[i].languageName + "Container .container"), {
+					for (var i = 0; i < this.supportedLanguages.length; i++) {
+						var editor = CKEDITOR.replace(this.$$("#" + this.supportedLanguages[i] + "Container .container"), {
 							language: "es"
 						});
+						editor.on('change',this._newValue.bind(this));
 						//editor.config.readOnly = this.readOnly;
-						//editor.setData(this.value);
+						editor.setData(this.value[this.supportedLanguages[i]] ? decodeURIComponent(this.value[this.supportedLanguages[i]]) : null);
+						this._ckInstances[this.supportedLanguages[i]] = editor;
 					}
 				});
 			},
 			
 			isSpinnerActive: function(pendingCount) {
 				return (pendingCount > 0);
-			},
-			
-			translateHandler: function(event) {
-				var baseLanguage;
-				var baseValue;
-				
-				if (this.values != null
-						&& this.values.length > 0) {
-					for (var i = 0; i < this.values.length; i++) {
-						var languageName = this.values[i].languageName;
-						if (languageName != null && languageName != "") {
-							if (this.values[i].value != null
-									&& this.values[i].value != "") {
-								baseLanguage = languageName;
-								baseValue = this.values[i].value;
-								break;
-							}
-						}						
-					}
-					
-					for (var i = 0; i < this.values.length; i++) {
-						var languageName = this.values[i].languageName;
-						if (languageName != baseLanguage) {
-							this.$.ajax.params["q"] = baseValue;
-							this.$.ajax.params["langpair"] = baseLanguage.split("_")[0] + "|" + languageName.replace("_", "-");
-							this.$.ajax.generateRequest();
-							this._pendingCount++;
-						}
-					}
-				}
-			},
-			
-			responseHandler: function(event, request) {
-				this._pendingCount--;
-				if (event.detail.succeeded) {
-					if (event.detail.response != null
-							&& event.detail.response.matches != null
-							&& event.detail.response.matches.length > 0) {
-						var values = JSON.parse(JSON.stringify(this.values));
-						var searchParams = new URLSearchParams(request.url);
-						for (var i = 0; i < values.length; i++) {
-							if (values[i].languageName == searchParams.get("langpair").split("|")[1].replace("-", "_")) {
-								values[i].value = event.detail.response.responseData.translatedText;
-							}
-						}
-						this.set("values", values);
-					}
-				}
 			},
 			
 			isSelected: function(number) {
@@ -277,7 +224,7 @@
 			},
 			
 			getRichTextContainerName: function(item) {
-				return item.languageName + "Container";
+				return item + "Container";
 			}
 		});
 	</script>

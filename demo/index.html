@@ -27,7 +27,8 @@
 								max-length="100"
 								label="Just a rich_text i18n test"
 								cols="6"
-								values='[{"languageName": "en_US", "languageLiteral": "Inglés", "value": "The dog is red"}, {"languageName": "es_ES", "languageLiteral": "Español"}, {"languageName": "de", "languageLiteral": "Alemán"}]'
+								supported-languages="['es_ES','en_EN']"
+								value="{'es_ES':'test1','en_EN':'test2'}"
 								pattern="[A-Za-z ]">
 						</puredat-rich-text-i18n>
 						
@@ -61,14 +62,7 @@
 						}
 						
 						function setValuesClickHandler(event) {
-							document.getElementById("field1").values = [{
-								"languageName": "de",
-								"languageLiteral": "Alemán"
-							}, {
-								"languageName": "es_ES",
-								"languageLiteral": "Español",
-								"value": "El perro es demasiado pequeño para proteger la casa"
-							}];
+							document.getElementById("field1").value = {'es_ES':'test1','en_EN':'test2'};
 							document.getElementById("field1").selected = 0;
 						}
 					</script>
