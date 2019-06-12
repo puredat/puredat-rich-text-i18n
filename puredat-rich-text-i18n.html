@@ -155,7 +155,7 @@
 			},
 
 			_getLangName: function(value){
-				return this._locales[value.split("_")[0].toUpperCase()];
+				return (value.split("_").length > 1 && this._locales[value.split("_")[1].toUpperCase()] ? this._locales[value.split("_")[1].toUpperCase()] : this._locales[value.split("_")[0].toUpperCase()]);
 			},
 
 			setValue: function(value){
